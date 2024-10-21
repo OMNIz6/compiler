@@ -89,7 +89,7 @@ void parse_assignment(const char *input) {
             if (current_token.type == TOKEN_NUMBER) {
                 int value = parse_expression_int(&cursor, current_token);
                 set_variable_int(var_name, value);
-            } else if (strcmp(current_token.value.strValue, "\"") == 0) {
+            } else if (current_token.type == TOKEN_STRING_LITERAL) {
                 char* value = parse_expression_str(&cursor, current_token);
                 set_variable_str(var_name, value);
             } else {

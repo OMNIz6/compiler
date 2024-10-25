@@ -4,14 +4,13 @@
 #include <stdio.h>
 #include <string.h>
 
-void parse_expression_omni(const char **input, Token current_token);
-
 void interpret(const char *line) {
-    if (strchr(line, '=')) {
-        parse_assignment(line);
+    const char *cursor = line;
+    Token* tokenArr = tokenize(&cursor);
+    print_token_string(tokenArr);
+    if (check_token(tokenArr, TOKEN_ASSIGN)) {
+        parse_assignment(tokenArr);
     } else {
-        const char *cursor = line;
-        Token token = get_next_token(&cursor);
-        parse_expression_omni(&cursor, token);
+        parse_expression_omni(tokenArr);
     }
 }

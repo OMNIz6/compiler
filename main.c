@@ -35,7 +35,7 @@ int main ( int argc, char *argv[] )
         {
             char line[1000];
             while ( fgets( line, sizeof line, file ) != NULL )
-            {
+            {   
                 interpret(line);
             }
             fclose( file );

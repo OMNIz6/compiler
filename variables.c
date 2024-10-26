@@ -8,15 +8,15 @@
 typedef struct Variable {
     char name[50];
     Value value;
-    Type type; // 0 for int, 1 for string
+    VarType type; // 0 for int, 1 for string
     struct Variable* next;
 } Variable;
 
 Variable* hashTable[TABLE_SIZE];
 
-Type intType = {VARIABLE_INT, "integer"};
-Type strType = {VARIABLE_STR, "string"};
-Type boolType = {VARIABLE_BOOL, "boolean"};
+VarType intType = {VARIABLE_INT, "integer"};
+VarType strType = {VARIABLE_STR, "string"};
+VarType boolType = {VARIABLE_BOOL, "boolean"};
 
 
 // Hash function to map a string key to an index
@@ -51,6 +51,7 @@ Variable* find_variable(const char* name) {
 
 // Function to set an integer variable
 void set_variable_int(const char* name, int value) {
+    // printf("Setting variable %s to %d\n", name, value);
     unsigned int index = hash(name);
     Variable* var = find_variable(name);
 
@@ -67,6 +68,7 @@ void set_variable_int(const char* name, int value) {
 
 // Function to set a string variable
 void set_variable_str(const char* name, const char* value) {
+    // printf("Setting variable %s to %s\n", name, value);
     unsigned int index = hash(name);
     Variable* var = find_variable(name);
 

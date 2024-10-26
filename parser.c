@@ -1,160 +1,386 @@
 #include "parser.h"
 #include "variables.h"
 #include "functions.h"
+#include "executor.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-int tokenIndex = 0;
+#define MAX_STACK_SIZE 100
 
-Token parse_expression_str(Token token, Token* tokenArr) {
-    for (int i = 0; tokenArr[tokenIndex].type != TOKEN_EOF || i < 1; tokenIndex++, i++) {
-        Token current_token = tokenArr[tokenIndex];
-        if (current_token.type == TOKEN_STRING) {
-            token = assign_string(token, current_token.value.strValue);
-        } else if (current_token.type == TOKEN_PLUS) {
-            continue;
-        } else if (current_token.type == TOKEN_IDENTIFIER && get_variable_type(current_token.value.strValue) == 1) {
-            token = assign_string(token, get_variable_str(current_token.value.strValue));
-        } else if (current_token.type == TOKEN_IDENTIFIER && get_variable_type(current_token.value.strValue) == 0) {
-            int value = get_variable_int(current_token.value.strValue);
-            char* buffer = to_str(value);
-            token = assign_string(token, buffer);
-            free(buffer);
-        } else if (current_token.type == TOKEN_NUMBER) {
-            char* buffer = to_str(current_token.value.intValue);
-            token = assign_string(token, buffer);
-            free(buffer);
-        } else {
-            printf("Error: Invalid token in expression.\n");
-            exit(1);
-        }
-    }
-    tokenIndex--;
-    return token;
-}
+typedef struct {
+    int indent;
+    int condition;
+    int if_indent;
+    int else_flag;
+} Condition;
 
-Token parse_expression_int(Token token, Token* tokenArr) {
-    int sign = 1;
-    int mode = 0;
-    for (int i = 0; tokenArr[tokenIndex].type != TOKEN_EOF || i < 1; tokenIndex++, i++) {
-        Token current_token = tokenArr[tokenIndex];
-        if (current_token.type == TOKEN_STRING) {
-            printf("Error Operation: String can't be included in number operations.\n");
-            exit(1);
-        } else if (current_token.type == TOKEN_NUMBER) {
-            if (mode == 1) {
-                token.value.intValue *= sign * current_token.value.intValue;
-            } else if (mode == 2) {
-                token.value.intValue /= sign * current_token.value.intValue;
-            } else {
-                token.value.intValue += sign * current_token.value.intValue;
-            }
-            mode = 0;
-        } else if (current_token.type == TOKEN_IDENTIFIER) {
-            if (mode == 1) {
-                token.value.intValue *= sign * get_variable_int(current_token.value.strValue);
-            } else if (mode == 2) {
-                token.value.intValue /= sign * get_variable_int(current_token.value.strValue);
-            } else {
-                token.value.intValue += sign * get_variable_int(current_token.value.strValue);
-            }
-            mode = 0;
-        } else if (current_token.type == TOKEN_PLUS) {
-            sign = 1;
-        } else if (current_token.type == TOKEN_MINUS) {
-            sign = -1;
-        } else if (current_token.type == TOKEN_MULTIPLY) {
-            mode = 1;
-        } else if (current_token.type == TOKEN_DIVIDE) {
-            mode = 2;
-        } else {
-            printf("Error: Invalid token in expression.\n");
-            exit(1);
-        }
-    }
-    tokenIndex--;
-    return token;
-}
+typedef struct {
+    Condition data[MAX_STACK_SIZE];
+    int top;
+} Stack;
 
-void parse_expression_omni(Token* tokenArr) {
-    Token current_token = tokenArr[0];
-    if (current_token.type == TOKEN_STRING || (current_token.type == TOKEN_IDENTIFIER && get_variable_type(current_token.value.strValue) == 1)) {
-        Token token = {TOKEN_STRING, .value.strValue = malloc(1)};
-        token.value.strValue[0] = '\0';
-        for (; tokenArr[tokenIndex].type != TOKEN_EOF; tokenIndex++) {
-             token = parse_expression_str(token, tokenArr);
-        }
-        char* result = token.value.strValue;
-        printf("%s\n", result);
-    } else if (current_token.type == TOKEN_NUMBER || (current_token.type == TOKEN_IDENTIFIER && get_variable_type(current_token.value.strValue) == 0)) {
-        Token token = {TOKEN_NUMBER, .value.intValue = 0};
-        for (; tokenArr[tokenIndex].type != TOKEN_EOF; tokenIndex++) {
-            token = parse_expression_int(token, tokenArr);
-        }
-        int result = token.value.intValue;
-        printf("%d\n", result);
+void push(Stack* stack, Condition value) {
+    if (stack->top < MAX_STACK_SIZE - 1) {
+        stack->data[++stack->top] = value;
     } else {
-        printf("Error: Invalid expression.\n");
+        fprintf(stderr, "Stack overflow\n");
         exit(1);
     }
-    tokenIndex = 0;
 }
 
-void parse_assignment(Token* tokenArr) {
-    Token current_token = tokenArr[tokenIndex];
-    if (current_token.type == TOKEN_IDENTIFIER) {
-        char var_name[50];
-        strcpy(var_name, current_token.value.strValue);
-        current_token = tokenArr[++tokenIndex];
-        if (current_token.type == TOKEN_ASSIGN) {
-            current_token = tokenArr[++tokenIndex];
-            Token result_token = current_token;
-            tokenIndex++;
-            if (current_token.type == TOKEN_NUMBER) {
-                for (; tokenArr[tokenIndex].type != TOKEN_EOF; tokenIndex++) {
-                    result_token = parse_expression_int(result_token, tokenArr);
-                }
-                int value = result_token.value.intValue;
-                set_variable_int(var_name, value);
-            } else if (current_token.type == TOKEN_STRING) {
-                for (; tokenArr[tokenIndex].type != TOKEN_EOF; tokenIndex++) {
-                    result_token = parse_expression_str(result_token, tokenArr);
-                }
-                char* str = result_token.value.strValue;
-                char* value = malloc(strlen(str) + 1);
-                strcpy(value, str);
-                set_variable_str(var_name, value);
-            } else {
-                printf("Error: Invalid value in assignment.\n");
-                exit(1);
-            }
-        } else {
-            printf("Error: Expected '=' after variable name.\n");
-            exit(1);
-        }
+Condition pop(Stack* stack) {
+    if (stack->top >= 0) {
+        return stack->data[stack->top--];
     } else {
-        printf("Error: Invalid statement.\n");
+        fprintf(stderr, "Stack underflow\n");
         exit(1);
     }
-    tokenIndex = 0;
 }
 
-int parse_condition(Token* tokenArr) {
-    int result = 0;
-    for (; tokenArr[tokenIndex].type != TOKEN_EOF; tokenIndex++) {
-        Token current_token = tokenArr[tokenIndex];
-        if (current_token.type == TOKEN_NUMBER) {
-            
-        } else if (current_token.type == TOKEN_IDENTIFIER) {
-            
-        } else if (current_token.type == TOKEN_PLUS) {
-           
-        } else if (current_token.type == TOKEN_MINUS) {
-        } else {
-            printf("Error: Invalid token in expression.\n");
+Condition peek(const Stack* stack) {
+    if (stack->top >= 0) {
+        return stack->data[stack->top];
+    } else {
+        fprintf(stderr, "Stack is empty\n");
+        exit(1);
+    }
+}
+
+int cursor = 0;
+int bool_flag = 0;
+int current_indent = 0;
+
+Stack if_stack = {.top = -1};
+
+Token assign_token(Token token){
+    Token result_token;
+    if(token.type == TOKEN_IDENTIFIER){
+        int type = get_variable_type(token.data.strValue);
+        if(type == VARIABLE_INT){
+            result_token.type = TOKEN_NUMBER;
+            result_token.data.intValue = get_variable_int(token.data.strValue);
+        }else if(type == VARIABLE_STR){
+            result_token.type = TOKEN_STRING;
+            result_token.data.strValue = get_variable_str(token.data.strValue);
+        }else if(type == VARIABLE_BOOL){
+            result_token.type = TOKEN_BOOLEAN;
+            result_token.data.intValue = get_variable_bool(token.data.strValue);
+        }else{
+            printf("Error: Invalid operation.\n");
             exit(1);
         }
+    }else{
+        return token;
+    }
+    return result_token;
+}
+
+Token parse(Token* arr){
+    // Event* eventArr = malloc(sizeof(Event));
+    Token left;
+    Token right;
+    Token operator;
+    Token result = {TOKEN_STRING, .data.strValue = "null"};
+    if (arr[cursor].type == TOKEN_IF){
+        cursor++;
+        left = parse(arr);
+        if (left.type == TOKEN_BOOLEAN){
+            Condition con = {.condition = left.data.intValue, .indent = 0, .if_indent = current_indent, .else_flag = 0};
+            push(&if_stack, con);
+        }
+    }
+    while(arr[cursor].type != TOKEN_EOF){
+        if(arr[cursor].type == TOKEN_IDENTIFIER){
+            if(arr[cursor+1].type == TOKEN_OPERATOR){
+                left = arr[cursor];
+                cursor++;
+                operator = assign_token(arr[cursor]);
+                if (arr[cursor + 1].type == TOKEN_CONDITION_START){
+                    cursor++;
+                    right = parse_condition(arr);
+                    result = execute_tokens(left, right, operator);
+                } else if (operator.data.opValue.value == OP_ASSIGN){
+                    if(arr[cursor + 2].type == TOKEN_EOF){
+                        cursor++;
+                        right = assign_token(arr[cursor]);
+                        execute_tokens(left, right, operator);
+                    }else if (operator.data.opValue.type == BOOL_OP){
+                        if (bool_flag == 1){
+                            break;
+                        }
+                        bool_flag = 1;
+                        if (arr[cursor+2].data.opValue.type != BOOL_OP){
+                            cursor++;
+                            right = parse(arr);
+                        }else{
+                            cursor++;
+                            right = assign_token(arr[cursor]);
+                        }
+                        result = execute_tokens(left, right, operator);
+                        bool_flag = 0;
+                    }else{
+                        cursor++;
+                        right = parse(arr);
+                        execute_tokens(left, right, operator);
+                    }
+                    result = (Token){TOKEN_NEXT};
+                }else{
+                    left = assign_token(left);
+                    cursor++;
+                    right = assign_token(arr[cursor]);
+                    result = execute_tokens(left, right, operator);
+                }
+            } else if(arr[cursor+1].type == TOKEN_EOF){
+                result = assign_token(arr[cursor]);
+            }
+        }else if(arr[cursor].type == TOKEN_NUMBER || arr[cursor].type == TOKEN_STRING || arr[cursor].type == TOKEN_BOOLEAN){
+            if (arr[cursor+1].type == TOKEN_EOF){
+                result = assign_token(arr[cursor]);
+            }else if (arr[cursor+1].type == TOKEN_OPERATOR){
+                left = assign_token(arr[cursor]);
+                cursor++;
+                operator = assign_token(arr[cursor]);
+                if (arr[cursor + 1].type == TOKEN_CONDITION_START){
+                    cursor++;
+                    right = parse_condition(arr);
+                    result = execute_tokens(left, right, operator);
+                }else if (operator.data.opValue.value == OP_ASSIGN){
+                    printf("Error: Can't assign to a value.\n");
+                }else if (operator.data.opValue.type == BOOL_OP){
+                    if (bool_flag == 1){
+                        break;
+                    }
+                    bool_flag = 1;
+                    if (arr[cursor+2].data.opValue.type != BOOL_OP)
+                    {
+                        cursor++;
+                        right = parse(arr);
+                    }else{
+                        cursor++;
+                        right = assign_token(arr[cursor]);
+                    }
+                    result = execute_tokens(left, right, operator);
+                    bool_flag = 0;
+                }else{
+                    cursor++;
+                    right = assign_token(arr[cursor]);
+                    result = execute_tokens(left, right, operator);
+                }
+                
+            }else{
+                
+            }
+            
+        }else if (arr[cursor].type == TOKEN_OPERATOR){
+            left = result;
+            operator = assign_token(arr[cursor]);
+            if (arr[cursor + 1].type == TOKEN_CONDITION_START){
+                cursor++;
+                right = parse_condition(arr);
+                result = execute_tokens(left, right, operator);
+            } else if (operator.data.opValue.type == BOOL_OP){
+                if (bool_flag == 1){
+                    break;
+                }
+                bool_flag = 1;
+                if (arr[cursor+2].data.opValue.type != BOOL_OP)
+                {
+                    cursor++;
+                    right = parse(arr);
+                }else{
+                    cursor++;
+                    right = assign_token(arr[cursor]);
+                }
+                result = execute_tokens(left, right, operator);
+                bool_flag = 0;
+            }else{
+                cursor++;
+                right = assign_token(arr[cursor]);
+                result = execute_tokens(left, right, operator);
+            }
+        }else if (arr[cursor].type == TOKEN_CONDITION_START){
+            cursor++;
+            right = parse_condition(arr);
+            result = execute_tokens(left, right, operator);
+        }
+        if (arr[cursor].type == TOKEN_EOF){
+            break;
+        }
+        
+        cursor++;
+    }
+
+    
+    return result;
+}
+
+Token parse_condition(Token* arr){
+    printf("Parsing condition\n");
+    Token left;
+    Token right;
+    Token operator;
+    Token result = {TOKEN_STRING, .data.strValue = "null"};
+    cursor++;
+    while(arr[cursor].type != TOKEN_CONDITION_END){
+        printf("start cursor: %d\n", cursor);
+        if(arr[cursor].type == TOKEN_IDENTIFIER){
+            if(arr[cursor+1].type == TOKEN_OPERATOR){
+                left = arr[cursor];
+                cursor++;
+                operator = assign_token(arr[cursor]);
+                if (arr[cursor + 1].type == TOKEN_CONDITION_START){
+                    cursor++;
+                    right = parse_condition(arr);
+                    result = execute_tokens(left, right, operator);
+                } else if (operator.data.opValue.value == OP_ASSIGN){
+                    if(arr[cursor + 2].type == TOKEN_EOF){
+                        cursor++;
+                        right = assign_token(arr[cursor]);
+                        execute_tokens(left, right, operator);
+                    }else if (operator.data.opValue.type == BOOL_OP){
+                        if (bool_flag == 1){
+                            break;
+                        }
+                        bool_flag = 1;
+                        if (arr[cursor+2].data.opValue.type != BOOL_OP){
+                            cursor++;
+                            right = parse(arr);
+                        }else{
+                            cursor++;
+                            right = assign_token(arr[cursor]);
+                        }
+                        result = execute_tokens(left, right, operator);
+                        bool_flag = 0;
+                    }else{
+                        cursor++;
+                        right = parse(arr);
+                        execute_tokens(left, right, operator);
+                    }
+                    result = (Token){TOKEN_NEXT};
+                }else{
+                    left = assign_token(left);
+                    cursor++;
+                    right = assign_token(arr[cursor]);
+                    result = execute_tokens(left, right, operator);
+                }
+            } else if(arr[cursor+1].type == TOKEN_EOF){
+                result = assign_token(arr[cursor]);
+            }
+        }else if(arr[cursor].type == TOKEN_NUMBER || arr[cursor].type == TOKEN_STRING || arr[cursor].type == TOKEN_BOOLEAN){
+            if (arr[cursor+1].type == TOKEN_EOF){
+                result = assign_token(arr[cursor]);
+            }else if (arr[cursor+1].type == TOKEN_OPERATOR){
+                left = assign_token(arr[cursor]);
+                cursor++;
+                operator = assign_token(arr[cursor]);
+                if (arr[cursor + 1].type == TOKEN_CONDITION_START){
+                    cursor++;
+                    right = parse_condition(arr);
+                    result = execute_tokens(left, right, operator);
+                }else if (operator.data.opValue.value == OP_ASSIGN){
+                    printf("Error: Can't assign to a value.\n");
+                }else if (operator.data.opValue.type == BOOL_OP){
+                    if (bool_flag == 1){
+                        break;
+                    }
+                    bool_flag = 1;
+                    if (arr[cursor+2].data.opValue.type != BOOL_OP)
+                    {
+                        cursor++;
+                        right = parse(arr);
+                    }else{
+                        cursor++;
+                        right = assign_token(arr[cursor]);
+                    }
+                    result = execute_tokens(left, right, operator);
+                    bool_flag = 0;
+                }else{
+                    cursor++;
+                    right = assign_token(arr[cursor]);
+                    result = execute_tokens(left, right, operator);
+                }
+                
+            }else{
+                
+            }
+            
+        }else if (arr[cursor].type == TOKEN_OPERATOR){
+            left = result;
+            operator = assign_token(arr[cursor]);
+            if (arr[cursor + 1].type == TOKEN_CONDITION_START){
+                cursor++;
+                right = parse_condition(arr);
+                result = execute_tokens(left, right, operator);
+            } else if (operator.data.opValue.type == BOOL_OP){
+                if (bool_flag == 1){
+                    break;
+                }
+                bool_flag = 1;
+                if (arr[cursor+2].data.opValue.type != BOOL_OP)
+                {
+                    cursor++;
+                    right = parse(arr);
+                }else{
+                    cursor++;
+                    right = assign_token(arr[cursor]);
+                }
+                result = execute_tokens(left, right, operator);
+                bool_flag = 0;
+            }else{
+                cursor++;
+                right = assign_token(arr[cursor]);
+                result = execute_tokens(left, right, operator);
+            }
+        }else if (arr[cursor].type == TOKEN_CONDITION_START){
+            cursor++;
+            right = parse_condition(arr);
+            result = execute_tokens(left, right, operator);
+        }
+        if (arr[cursor].type == TOKEN_EOF){
+            break;
+        }
+        printf("end cursor: %d\n", cursor);
+        cursor++;
     }
     return result;
+}
+Token parse_main(Token* arr){
+    cursor = 0;
+    current_indent = 0;
+    if (if_stack.top != -1){
+        while (arr[cursor].type == TOKEN_INDENT){
+            current_indent++;
+            cursor++;
+        }
+        if(peek(&if_stack).indent == 0){
+            Condition con = pop(&if_stack);
+            con.indent = current_indent;
+            push(&if_stack, con);
+        }
+        if (current_indent == peek(&if_stack).if_indent && arr[cursor].type == TOKEN_ELSE){
+            Condition con = pop(&if_stack);
+            con.else_flag = 1;
+            push(&if_stack, con);
+        }
+        if (current_indent < peek(&if_stack).indent){
+            pop(&if_stack);
+            return parse_main(arr);
+        }else if (current_indent == peek(&if_stack).indent){
+            if (peek(&if_stack).condition == 1){
+                if (peek(&if_stack).else_flag == 1){
+                    return (Token){TOKEN_NEXT};
+                }
+                
+                return parse(arr);
+            } else if (peek(&if_stack).condition == 0 && peek(&if_stack).else_flag == 1){
+                return parse(arr);
+            }else{
+                return (Token){TOKEN_NEXT};
+            }
+        }
+        
+    }else{
+        return parse(arr);
+    }
 }

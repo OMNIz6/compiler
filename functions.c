@@ -7,3 +7,7 @@ char* to_str(int num){
     sprintf(str, "%d", num);
     return str;
 }
+
+int to_int(char* str){
+    return atoi(str);
+}

@@ -7,37 +7,56 @@
 typedef enum {
     TOKEN_NUMBER,
     TOKEN_IDENTIFIER,
-    TOKEN_PLUS,
-    TOKEN_MINUS,
-    TOKEN_MULTIPLY,
-    TOKEN_DIVIDE,
-    TOKEN_ASSIGN,
     TOKEN_EOF,
     TOKEN_INVALID,
     TOKEN_STRING,
-    TOKEN_EQUAL,
-    TOKEN_NOT_EQUAL,
-    TOKEN_GREATER,
-    TOKEN_LESS,
-    TOKEN_GREATER_EQUAL,
-    TOKEN_LESS_EQUAL,
-    TOKEN_AND,
-    TOKEN_OR,
-    TOKEN_NOT,
     TOKEN_IF,
     TOKEN_ELSE,
-    TOKEN_INDENT,
+    TOKEN_CONDITION_START,
+    TOKEN_CONDITION_END,
+    TOKEN_BLOCK_START,
+    TOKEN_BLOCK_END,
     TOKEN_BOOLEAN,
+    TOKEN_OPERATOR,
+    TOKEN_INDENT,
+    TOKEN_NEXT
 } TokenType;
 
+typedef enum{
+    MATH_OP,
+    BOOL_OP,
+    ASSIGN_OP
+} OperatorType;
+
+typedef enum {
+    OP_PLUS,
+    OP_MINUS,
+    OP_MULTIPLY,
+    OP_DIVIDE,
+    OP_EQUAL,
+    OP_NOT_EQUAL,
+    OP_GREATER,
+    OP_LESS,
+    OP_GREATER_EQUAL,
+    OP_LESS_EQUAL,
+    OP_AND,
+    OP_OR,
+    OP_NOT,
+    OP_ASSIGN,
+} OperatorValue;
+typedef struct{
+    OperatorType type;
+    OperatorValue value;
+} Operator;
 typedef union {
     int intValue;
     char* strValue;
+    Operator opValue;
 } TokenValue;
 
 typedef struct {
     TokenType type;
-    TokenValue value;
+    TokenValue data;
 } Token;
 
 Token get_next_token(const char **input);
@@ -45,9 +64,5 @@ Token* tokenize(const char **input);
 void print_token_string(Token* arr);
 int check_token(Token* arr, TokenType type);
 Token assign_string(Token token, char* str);
-
-#define DEFAULT_TOKEN_STRING (Token){ \
-    .value.strValue = malloc(1), \
-}
 
 #endif // TOKEN_H

@@ -18,12 +18,14 @@ typedef union  {
 typedef struct {
     DataType type;
     char* name;
-} Type;
+} VarType;
 
 void set_variable_int(const char *name, int value);
 void set_variable_str(const char *name, const char *value);
+void set_variable_bool(const char *name, bool value);
 int get_variable_int(const char *name);
 char* get_variable_str(const char *name);
+bool get_variable_bool(const char *name);
 int get_variable_type(const char *name);
 void freeTable();
 

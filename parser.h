@@ -2,10 +2,8 @@
 #define PARSER_H
 #include "lexer.h"
 
-Token parse_expression_str(Token token, Token* tokenArr);
-Token parse_expression_int(Token token, Token* tokenArr);
-void parse_expression_omni(Token* tokenArr);
-void parse_assignment(Token* tokenArr);
-
+Token parse(Token* arr);
+Token parse_main(Token* arr);
+Token parse_condition(Token* arr);
 
 #endif // PARSER_H

@@ -6,22 +6,28 @@
 #include <string.h>
 
 Token assign_string(Token token, char* str) {
-    size_t new_length = strlen(token.value.strValue) + strlen(str) + 1;
-    token.value.strValue = realloc(token.value.strValue, new_length);
-    if (token.value.strValue[0] == '\0') {
-        strcpy(token.value.strValue, str);
+    size_t new_length = strlen(token.data.strValue) + strlen(str) + 1;
+    token.data.strValue = realloc(token.data.strValue, new_length);
+    if (token.data.strValue[0] == '\0') {
+        strcpy(token.data.strValue, str);
     } else {
-        strcat(token.value.strValue, str);
+        strcat(token.data.strValue, str);
     }
     return token;
 }
 
 Token get_next_token(const char **input) {
+    if (**input == '\t' ) {
+        (*input)++;
+        Token token = {TOKEN_INDENT, .data.strValue = malloc(1)};
+        token.data.strValue[0] = '\0';
+        return token;
+    }
     while (isspace(**input)) (*input)++;
     if (isdigit(**input)) {
-        Token token = {TOKEN_NUMBER, .value.intValue = 0};
+        Token token = {TOKEN_NUMBER, .data.intValue = 0};
         while (isdigit(**input)) {
-            token.value.intValue = token.value.intValue * 10 + (*(*input)++ - '0');
+            token.data.intValue = token.data.intValue * 10 + (*(*input)++ - '0');
         }
         return token;
     }
@@ -34,22 +40,31 @@ Token get_next_token(const char **input) {
         }
         name[i] = '\0';
         if (strcmp(name, "if") == 0) {
-            Token token = {TOKEN_IF, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
-            strcpy(token.value.strValue, name);
+            Token token = {TOKEN_IF, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
+            strcpy(token.data.strValue, name);
+            return token;
+        } else if (strcmp(name, "else") == 0) {
+            Token token = {TOKEN_ELSE, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
+            strcpy(token.data.strValue, name);
             return token;
         } else if (strcmp(name, "true") == 0) {
-            Token token = {TOKEN_BOOLEAN, .value.strValue = "true", .value.intValue = 1};
-            strcpy(token.value.strValue, name);
+            Token token = {TOKEN_BOOLEAN, .data.intValue = 1};
             return token;
         } else if (strcmp(name, "false") == 0) {
-            Token token = {TOKEN_BOOLEAN, .value.strValue = "false", .value.intValue = 0};
-            strcpy(token.value.strValue, name);
+            Token token = {TOKEN_BOOLEAN, .data.intValue = 0};
             return token;
-        } else {
-            Token token = {TOKEN_IDENTIFIER, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
-            strcpy(token.value.strValue, name);
+        } else if (strcmp(name, "and") == 0) {
+            Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_AND}};
+            return token;
+        } else if (strcmp(name, "or") == 0) {
+            Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_OR}};
+            return token;
+        }else {
+            Token token = {TOKEN_IDENTIFIER, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
+            strcpy(token.data.strValue, name);
             return token;
         }
         free(name);
@@ -57,44 +72,32 @@ Token get_next_token(const char **input) {
     switch (**input) {
         case '+': {
             (*input)++;
-            Token token = {TOKEN_PLUS, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
-            token = assign_string(token, "+");
+            Token token = {TOKEN_OPERATOR, .data.opValue = {MATH_OP, OP_PLUS}};
             return token;
         }
         case '-': {
             (*input)++;
-            Token token = {TOKEN_MINUS, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
-            token = assign_string(token, "-");
+            Token token = {TOKEN_OPERATOR, .data.opValue = {MATH_OP, OP_MINUS}};
             return token;
         }
         case '*': {
             (*input)++;
-            Token token = {TOKEN_MULTIPLY, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
-            token = assign_string(token, "*");
+            Token token = {TOKEN_OPERATOR, .data.opValue = {MATH_OP, OP_MULTIPLY}};
             return token;
         }
         case '/': {
             (*input)++;
-            Token token = {TOKEN_DIVIDE, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
-            token = assign_string(token, "/");
+            Token token = {TOKEN_OPERATOR, .data.opValue = {MATH_OP, OP_DIVIDE}};
             return token;
         }
         case '=': {
             (*input)++;
             if (**input == '=') {
                 (*input)++;
-                Token token = {TOKEN_EQUAL, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, "==");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_EQUAL}};
                 return token;
             } else {
-                Token token = {TOKEN_ASSIGN, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, "=");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {ASSIGN_OP, OP_ASSIGN}};
                 return token;
             }
         }
@@ -102,14 +105,10 @@ Token get_next_token(const char **input) {
             (*input)++;
             if (**input == '=') {
                 (*input)++;
-                Token token = {TOKEN_GREATER_EQUAL, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, ">=");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_GREATER_EQUAL}};
                 return token;
             } else {
-                Token token = {TOKEN_GREATER, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, ">");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_GREATER}};
                 return token;
             }
         }
@@ -117,14 +116,10 @@ Token get_next_token(const char **input) {
             (*input)++;
             if (**input == '=') {
                 (*input)++;
-                Token token = {TOKEN_LESS_EQUAL, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, "<=");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_LESS_EQUAL}};
                 return token;
             } else {
-                Token token = {TOKEN_LESS, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, "<");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_LESS}};
                 return token;
             }
         }
@@ -132,14 +127,10 @@ Token get_next_token(const char **input) {
             (*input)++;
             if (**input == '=') {
                 (*input)++;
-                Token token = {TOKEN_NOT_EQUAL, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, "!=");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_NOT_EQUAL}};
                 return token;
             } else {
-                Token token = {TOKEN_NOT, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, "!");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_NOT}};
                 return token;
             }
         }
@@ -147,13 +138,11 @@ Token get_next_token(const char **input) {
             (*input)++;
             if (**input == '&') {
                 (*input)++;
-                Token token = {TOKEN_AND, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, "&&");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_AND}};
                 return token;
             } else {
-                Token token = {TOKEN_INVALID, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
+                Token token = {TOKEN_INVALID, .data.strValue = malloc(1)};
+                token.data.strValue[0] = '\0';
                 return token;
             }
         }
@@ -161,25 +150,23 @@ Token get_next_token(const char **input) {
             (*input)++;
             if (**input == '|') {
                 (*input)++;
-                Token token = {TOKEN_OR, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
-                token = assign_string(token, "||");
+                Token token = {TOKEN_OPERATOR, .data.opValue = {BOOL_OP, OP_OR}};
                 return token;
             } else {
-                Token token = {TOKEN_INVALID, .value.strValue = malloc(1)};
-                token.value.strValue[0] = '\0';
+                Token token = {TOKEN_INVALID, .data.strValue = malloc(1)};
+                token.data.strValue[0] = '\0';
                 return token;
             }
         }
         case '\0': {
-            Token token = {TOKEN_EOF, .value.strValue = malloc(1)};
-            token.value.strValue[0] = 'e';
+            Token token = {TOKEN_EOF, .data.strValue = malloc(1)};
+            token.data.strValue[0] = 'e';
             return token;
         }
         case '"': {
-            Token token = {TOKEN_STRING, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
-            if (token.value.strValue == NULL) {
+            Token token = {TOKEN_STRING, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
+            if (token.data.strValue == NULL) {
                 fprintf(stderr, "Memory allocation failed\n");
                 exit(1);
             }
@@ -192,13 +179,13 @@ Token get_next_token(const char **input) {
             }
             token = assign_string(token, str);
             (*input)++;
-            token.value.strValue[i] = '\0';
+            token.data.strValue[i] = '\0';
             return token;
         }
         case '\'': {
-            Token token = {TOKEN_STRING, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
-            if (token.value.strValue == NULL) {
+            Token token = {TOKEN_STRING, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
+            if (token.data.strValue == NULL) {
                 fprintf(stderr, "Memory allocation failed\n");
                 exit(1);
             }
@@ -211,23 +198,55 @@ Token get_next_token(const char **input) {
             }
             token = assign_string(token, str);
             (*input)++;
-            token.value.strValue[i] = '\0';
+            token.data.strValue[i] = '\0';
+            return token;
+        }
+        case '(': {
+            (*input)++;
+            Token token = {TOKEN_CONDITION_START, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
+            return token;
+        }
+        case ')': {
+            (*input)++;
+            Token token = {TOKEN_CONDITION_END, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
+            return token;
+        }
+        case '{': {
+            (*input)++;
+            Token token = {TOKEN_BLOCK_START, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
+            return token;
+        }
+        case '}': {
+            (*input)++;
+            Token token = {TOKEN_BLOCK_END, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
             return token;
         }
         default: {
             (*input)++;
-            Token token = {TOKEN_INVALID, .value.strValue = malloc(1)};
-            token.value.strValue[0] = '\0';
+            Token token = {TOKEN_INVALID, .data.strValue = malloc(1)};
+            token.data.strValue[0] = '\0';
             return token;
         }
     }
 }
 
 Token* tokenize(const char **input) {
-    printf("Tokenizing...\n");
     Token* tokenArr = malloc(1);
     int len = 0;
+    while (isspace(**input)) {
+        (*input)++;
+        Token token = {TOKEN_INDENT, .data.strValue = malloc(1)};
+        token.data.strValue[0] = '\0';
+        tokenArr = realloc(tokenArr, (len + 1) * sizeof(Token));
+        tokenArr[len++] = token;
+    };
+    
     Token token = get_next_token(input);
+    
     while (1) {
         tokenArr = realloc(tokenArr, (len + 1) * sizeof(Token));
         tokenArr[len++] = token;
@@ -251,15 +270,6 @@ void print_token_string(Token* arr) {
             case TOKEN_IDENTIFIER:
                 printf("IDENTIFIER ");
                 break;
-            case TOKEN_PLUS:
-                printf("PLUS ");
-                break;
-            case TOKEN_MINUS:
-                printf("MINUS ");
-                break;
-            case TOKEN_ASSIGN:
-                printf("ASSIGN ");
-                break;
             case TOKEN_STRING:
                 printf("STRING ");
                 break;
@@ -269,47 +279,78 @@ void print_token_string(Token* arr) {
             case TOKEN_INVALID:
                 printf("INVALID ");
                 break;
-            case TOKEN_MULTIPLY:
-                printf("MULTIPLY ");
-                break;
-            case TOKEN_DIVIDE:
-                printf("DIVIDE ");
-                break;
-            case TOKEN_EQUAL:
-                printf("EQUAL ");
-                break;
-            case TOKEN_NOT_EQUAL:
-                printf("NOT_EQUAL ");
-                break;
-            case TOKEN_GREATER:
-                printf("GREATER ");
-                break;
-            case TOKEN_LESS:
-                printf("LESS ");
-                break;
-            case TOKEN_GREATER_EQUAL:
-                printf("GREATER_EQUAL ");
-                break;
-            case TOKEN_LESS_EQUAL:
-                printf("LESS_EQUAL ");
-                break;
-            case TOKEN_AND:
-                printf("AND ");
-                break;
-            case TOKEN_OR:
-                printf("OR ");
-                break;
-            case TOKEN_NOT:
-                printf("NOT ");
-                break;
             case TOKEN_IF:
                 printf("IF ");
                 break;
             case TOKEN_ELSE:
                 printf("ELSE ");
                 break;
+            case TOKEN_CONDITION_START:
+                printf("CONDITION_START ");
+                break;
+            case TOKEN_CONDITION_END:
+                printf("CONDITION_END ");
+                break;
+            case TOKEN_BLOCK_START:
+                printf("BLOCK_START ");
+                break;
+            case TOKEN_BLOCK_END:
+                printf("BLOCK_END ");
+                break;
+            case TOKEN_BOOLEAN:
+                printf("BOOLEAN ");
+                break;
             case TOKEN_INDENT:
                 printf("INDENT ");
+                break;
+            case TOKEN_OPERATOR:
+                switch (arr[i].data.opValue.value) {
+                    case OP_PLUS:
+                        printf("PLUS ");
+                        break;
+                    case OP_MINUS:
+                        printf("MINUS ");
+                        break;
+                    case OP_MULTIPLY:
+                        printf("MULTIPLY ");
+                        break;
+                    case OP_DIVIDE:
+                        printf("DIVIDE ");
+                        break;
+                    case OP_EQUAL:
+                        printf("EQUAL ");
+                        break;
+                    case OP_NOT_EQUAL:
+                        printf("NOT_EQUAL ");
+                        break;
+                    case OP_GREATER:
+                        printf("GREATER ");
+                        break;
+                    case OP_LESS:
+                        printf("LESS ");
+                        break;
+                    case OP_GREATER_EQUAL:
+                        printf("GREATER_EQUAL ");
+                        break;
+                    case OP_LESS_EQUAL:
+                        printf("LESS_EQUAL ");
+                        break;
+                    case OP_AND:
+                        printf("AND ");
+                        break;
+                    case OP_OR:
+                        printf("OR ");
+                        break;
+                    case OP_NOT:
+                        printf("NOT ");
+                        break;
+                    case OP_ASSIGN:
+                        printf("ASSIGN ");
+                        break;
+                    default:
+                        printf("OPERATOR ");
+                        break;
+                }
                 break;
             default:
                 printf("TOKEN ");

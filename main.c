@@ -8,7 +8,7 @@ void print_error_main(const char *message) {
 }
 
 int main(int argc, char *argv[]) {
-    if (argc == 1 && strcmp(argv[0], "omni") == 0) {
+    if (argc == 1 && (strcmp(argv[0], "omni") == 0 || strcmp(argv[0], "./omni") == 0) ) {
         char line[256];
         printf("Enter your code (type 'exit' to quit):\n");
         int line_number = 0;

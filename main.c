@@ -1,44 +1,52 @@
 #include "interpreter.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-int main ( int argc, char *argv[] )
-{
-    //scanf
-    if (argc == 1 && strcmp(argv[0], "omni") == 0)
-    {
+void print_error_main(const char *message) {
+    fprintf(stderr, "\033[1;31mError:\033[0m %s\n", message); // Red color for errors
+}
+
+int main(int argc, char *argv[]) {
+    if (argc == 1 && strcmp(argv[0], "omni") == 0) {
         char line[256];
-
         printf("Enter your code (type 'exit' to quit):\n");
-
+        int line_number = 0;
         while (1) {
             printf("> ");
-            fgets(line, sizeof(line), stdin);
+            if (fgets(line, sizeof(line), stdin) == NULL) {
+                print_error_main("Failed to read input");
+                continue;
+            }
             line[strcspn(line, "\n")] = 0;
             if (strcmp(line, "exit") == 0) break;
-            interpret(line);
+            line_number++;
+            interpret(line, line_number);
         }
-    }
-    else if ( argc == 2 ) /* argc should be 2 for correct execution */
-    {   
+    } else if (argc == 2) { // argc should be 2 for correct execution
         char *file_name = argv[1];
-        // We assume argv[1] is a filename to open
         if (strlen(argv[1]) <= 5 || strcmp(argv[1] + strlen(argv[1]) - 5, ".omni") != 0) {
             file_name = strcat(argv[1], ".omni");
         }
-        FILE *file = fopen( file_name, "r" );
-        if ( file == 0 )
-        {
-            printf( "Could not open file\n" );
-        }
-        else
-        {
+        FILE *file = fopen(file_name, "r");
+        if (file == NULL) {
+            print_error_main("Could not open file");
+            return 1;
+        } else {
             char line[1000];
-            while ( fgets( line, sizeof line, file ) != NULL )
-            {   
-                interpret(line);
+            int line_number = 0;
+            while (fgets(line, sizeof(line), file) != NULL) {
+                line_number++;
+                interpret(line, line_number);
             }
-            fclose( file );
+            if (fclose(file) != 0) {
+                print_error_main("Failed to close file");
+                return 1;
+            }
         }
+    } else {
+        print_error_main("Invalid number of arguments");
+        return 1;
     }
+    return 0;
 }

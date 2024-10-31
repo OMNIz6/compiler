@@ -4,11 +4,11 @@
 #include <stdio.h>
 #include <string.h>
 
-void interpret(const char *line) {
+void interpret(const char *line, int line_number) {
     const char *cursor = line;
     Token* tokenArr = tokenize(&cursor);
     print_token_string(tokenArr);
-    
+    set_meta(line, line_number);
     Token result = parse_main(tokenArr);
     if (result.type == TOKEN_NEXT) {
         printf("Next\n");

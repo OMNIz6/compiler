@@ -57,9 +57,11 @@ typedef union {
 typedef struct {
     TokenType type;
     TokenValue data;
+    int index;
+    int count;
 } Token;
 
-Token get_next_token(const char **input);
+Token get_next_token(const char **input, int *line, int *char_count);
 Token* tokenize(const char **input);
 void print_token_string(Token* arr);
 int check_token(Token* arr, TokenType type);

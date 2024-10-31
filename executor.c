@@ -6,8 +6,8 @@ Token execute_tokens(Token left_token, Token right_token, Token operator_token){
     Token result_token;
     // printf("left: %s\n", left_token.data.strValue);
     // printf("right: %s\n", right_token.data.strValue);
-    printf("left: %d\n", left_token.data.intValue);
-    printf("right: %d\n", right_token.data.intValue);
+    // printf("left: %d\n", left_token.data.intValue);
+    // printf("right: %d\n", right_token.data.intValue);
 
     switch (operator_token.data.opValue.value) {
         case OP_PLUS:

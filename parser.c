@@ -50,8 +50,26 @@ Condition peek(const Stack* stack) {
 int cursor = 0;
 int bool_flag = 0;
 int current_indent = 0;
+const char* code_line;
+int line_number;
 
 Stack if_stack = {.top = -1};
+
+void print_error(Token error_token, char* error_type, char* error_message){
+    printf("%s ", error_type);
+    printf("at line %d:", line_number);
+    printf("%d\n",  error_token.index);
+    printf("        %s\n", code_line);
+    printf("        ");
+    for (int i = 0; i < error_token.index; i++){
+        printf(" ");
+    }
+    for (int i = 0; i < error_token.count; i++){
+        printf("^");
+    } 
+    printf("\n%s\n", error_message);
+    exit(1);
+}
 
 Token assign_token(Token token){
     Token result_token;
@@ -91,11 +109,20 @@ Token parse(Token* arr){
         }
     }
     while(arr[cursor].type != TOKEN_EOF){
+        if (arr[cursor].type == TOKEN_INDENT){
+            cursor++;
+            continue;
+        }
         if(arr[cursor].type == TOKEN_IDENTIFIER){
             if(arr[cursor+1].type == TOKEN_OPERATOR){
                 left = arr[cursor];
                 cursor++;
                 operator = assign_token(arr[cursor]);
+                if (arr[cursor+1].type != TOKEN_NUMBER && arr[cursor+1].type != TOKEN_STRING && arr[cursor+1].type != TOKEN_BOOLEAN && arr[cursor+1].type != TOKEN_IDENTIFIER){
+                    cursor++;
+                    print_error(arr[cursor], "Syntax Error", "Expected a value.");     
+                }
+                
                 if (arr[cursor + 1].type == TOKEN_CONDITION_START){
                     cursor++;
                     right = parse_condition(arr);
@@ -104,7 +131,7 @@ Token parse(Token* arr){
                     if(arr[cursor + 2].type == TOKEN_EOF){
                         cursor++;
                         right = assign_token(arr[cursor]);
-                        execute_tokens(left, right, operator);
+                        result = execute_tokens(left, right, operator);
                     }else if (operator.data.opValue.type == BOOL_OP){
                         if (bool_flag == 1){
                             break;
@@ -133,6 +160,9 @@ Token parse(Token* arr){
                 }
             } else if(arr[cursor+1].type == TOKEN_EOF){
                 result = assign_token(arr[cursor]);
+            }else{
+                cursor++;
+                print_error(arr[cursor], "Syntax Error", "Expected an operator.");                
             }
         }else if(arr[cursor].type == TOKEN_NUMBER || arr[cursor].type == TOKEN_STRING || arr[cursor].type == TOKEN_BOOLEAN){
             if (arr[cursor+1].type == TOKEN_EOF){
@@ -146,7 +176,7 @@ Token parse(Token* arr){
                     right = parse_condition(arr);
                     result = execute_tokens(left, right, operator);
                 }else if (operator.data.opValue.value == OP_ASSIGN){
-                    printf("Error: Can't assign to a value.\n");
+                    print_error(arr[cursor], "Syntax Error", "Cannot assign to a value.");
                 }else if (operator.data.opValue.type == BOOL_OP){
                     if (bool_flag == 1){
                         break;
@@ -162,6 +192,9 @@ Token parse(Token* arr){
                     }
                     result = execute_tokens(left, right, operator);
                     bool_flag = 0;
+                }else if(arr[cursor+1].type != TOKEN_NUMBER && arr[cursor+1].type != TOKEN_STRING && arr[cursor+1].type != TOKEN_BOOLEAN && arr[cursor+1].type != TOKEN_IDENTIFIER){
+                    cursor++;
+                    print_error(arr[cursor], "Syntax Error", "Expected a value.");
                 }else{
                     cursor++;
                     right = assign_token(arr[cursor]);
@@ -169,9 +202,9 @@ Token parse(Token* arr){
                 }
                 
             }else{
-                
+                cursor++;
+                print_error(arr[cursor], "Syntax Error", "Expected an operator.");
             }
-            
         }else if (arr[cursor].type == TOKEN_OPERATOR){
             left = result;
             operator = assign_token(arr[cursor]);
@@ -179,6 +212,9 @@ Token parse(Token* arr){
                 cursor++;
                 right = parse_condition(arr);
                 result = execute_tokens(left, right, operator);
+            }else if(arr[cursor+ 1].type != TOKEN_NUMBER && arr[cursor+1].type != TOKEN_STRING && arr[cursor+1].type != TOKEN_BOOLEAN && arr[cursor+1].type != TOKEN_IDENTIFIER){
+                cursor++;
+                print_error(arr[cursor], "Syntax Error", "Expected a value.");
             } else if (operator.data.opValue.type == BOOL_OP){
                 if (bool_flag == 1){
                     break;
@@ -203,6 +239,9 @@ Token parse(Token* arr){
             cursor++;
             right = parse_condition(arr);
             result = execute_tokens(left, right, operator);
+        }else{
+            cursor++;
+            print_error(arr[cursor], "Syntax Error", "Expected an identifier, number, string, or boolean.");
         }
         if (arr[cursor].type == TOKEN_EOF){
             break;
@@ -223,12 +262,16 @@ Token parse_condition(Token* arr){
     Token result = {TOKEN_STRING, .data.strValue = "null"};
     cursor++;
     while(arr[cursor].type != TOKEN_CONDITION_END){
-        printf("start cursor: %d\n", cursor);
         if(arr[cursor].type == TOKEN_IDENTIFIER){
             if(arr[cursor+1].type == TOKEN_OPERATOR){
                 left = arr[cursor];
                 cursor++;
                 operator = assign_token(arr[cursor]);
+                if (arr[cursor+1].type != TOKEN_NUMBER && arr[cursor+1].type != TOKEN_STRING && arr[cursor+1].type != TOKEN_BOOLEAN && arr[cursor+1].type != TOKEN_IDENTIFIER){
+                    cursor++;
+                    print_error(arr[cursor], "Syntax Error", "Expected a value.");     
+                }
+                
                 if (arr[cursor + 1].type == TOKEN_CONDITION_START){
                     cursor++;
                     right = parse_condition(arr);
@@ -237,7 +280,7 @@ Token parse_condition(Token* arr){
                     if(arr[cursor + 2].type == TOKEN_EOF){
                         cursor++;
                         right = assign_token(arr[cursor]);
-                        execute_tokens(left, right, operator);
+                        result = execute_tokens(left, right, operator);
                     }else if (operator.data.opValue.type == BOOL_OP){
                         if (bool_flag == 1){
                             break;
@@ -266,6 +309,9 @@ Token parse_condition(Token* arr){
                 }
             } else if(arr[cursor+1].type == TOKEN_EOF){
                 result = assign_token(arr[cursor]);
+            }else{
+                cursor++;
+                print_error(arr[cursor], "Syntax Error", "Expected an operator.");                
             }
         }else if(arr[cursor].type == TOKEN_NUMBER || arr[cursor].type == TOKEN_STRING || arr[cursor].type == TOKEN_BOOLEAN){
             if (arr[cursor+1].type == TOKEN_EOF){
@@ -279,7 +325,7 @@ Token parse_condition(Token* arr){
                     right = parse_condition(arr);
                     result = execute_tokens(left, right, operator);
                 }else if (operator.data.opValue.value == OP_ASSIGN){
-                    printf("Error: Can't assign to a value.\n");
+                    print_error(arr[cursor], "Syntax Error", "Cannot assign to a value.");
                 }else if (operator.data.opValue.type == BOOL_OP){
                     if (bool_flag == 1){
                         break;
@@ -295,6 +341,9 @@ Token parse_condition(Token* arr){
                     }
                     result = execute_tokens(left, right, operator);
                     bool_flag = 0;
+                }else if(arr[cursor+1].type != TOKEN_NUMBER && arr[cursor+1].type != TOKEN_STRING && arr[cursor+1].type != TOKEN_BOOLEAN && arr[cursor+1].type != TOKEN_IDENTIFIER){
+                    cursor++;
+                    print_error(arr[cursor], "Syntax Error", "Expected a value.");
                 }else{
                     cursor++;
                     right = assign_token(arr[cursor]);
@@ -302,9 +351,9 @@ Token parse_condition(Token* arr){
                 }
                 
             }else{
-                
+                cursor++;
+                print_error(arr[cursor], "Syntax Error", "Expected an operator.");
             }
-            
         }else if (arr[cursor].type == TOKEN_OPERATOR){
             left = result;
             operator = assign_token(arr[cursor]);
@@ -312,6 +361,9 @@ Token parse_condition(Token* arr){
                 cursor++;
                 right = parse_condition(arr);
                 result = execute_tokens(left, right, operator);
+            }else if(arr[cursor+ 1].type != TOKEN_NUMBER && arr[cursor+1].type != TOKEN_STRING && arr[cursor+1].type != TOKEN_BOOLEAN && arr[cursor+1].type != TOKEN_IDENTIFIER){
+                cursor++;
+                print_error(arr[cursor], "Syntax Error", "Expected a value.");
             } else if (operator.data.opValue.type == BOOL_OP){
                 if (bool_flag == 1){
                     break;
@@ -336,15 +388,19 @@ Token parse_condition(Token* arr){
             cursor++;
             right = parse_condition(arr);
             result = execute_tokens(left, right, operator);
+        }else{
+            cursor++;
+            print_error(arr[cursor], "Syntax Error", "Expected an identifier, number, string, or boolean.");
         }
         if (arr[cursor].type == TOKEN_EOF){
             break;
         }
-        printf("end cursor: %d\n", cursor);
+        
         cursor++;
     }
     return result;
 }
+
 Token parse_main(Token* arr){
     cursor = 0;
     current_indent = 0;
@@ -383,4 +439,9 @@ Token parse_main(Token* arr){
     }else{
         return parse(arr);
     }
+}
+
+void set_meta(const char* line, int line_no){
+    code_line = line;
+    line_number = line_no;
 }

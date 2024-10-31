@@ -102,7 +102,7 @@ Token parse(Token* arr){
     Token result = {TOKEN_STRING, .data.strValue = "null"};
     if (arr[cursor].type == TOKEN_IF){
         cursor++;
-        left = parse(arr);
+        left = get_boolean(parse(arr));
         if (left.type == TOKEN_BOOLEAN){
             Condition con = {.condition = left.data.intValue, .indent = 0, .if_indent = current_indent, .else_flag = 0};
             push(&if_stack, con);
@@ -113,6 +113,12 @@ Token parse(Token* arr){
             cursor++;
             continue;
         }
+        if (result.type != TOKEN_STRING || (result.type == TOKEN_STRING && strcmp(result.data.strValue, "null") == 1)){
+            if(arr[cursor].type != TOKEN_EOF && arr[cursor].type != TOKEN_OPERATOR){
+                print_error(arr[cursor], "Syntax Error", "Expected an operator."); 
+            }
+        }
+        
         if(arr[cursor].type == TOKEN_IDENTIFIER){
             if(arr[cursor+1].type == TOKEN_OPERATOR){
                 left = arr[cursor];
@@ -255,7 +261,6 @@ Token parse(Token* arr){
 }
 
 Token parse_condition(Token* arr){
-    printf("Parsing condition\n");
     Token left;
     Token right;
     Token operator;
@@ -418,6 +423,7 @@ Token parse_main(Token* arr){
             Condition con = pop(&if_stack);
             con.else_flag = 1;
             push(&if_stack, con);
+            return (Token){TOKEN_NEXT};
         }
         if (current_indent < peek(&if_stack).indent){
             pop(&if_stack);
@@ -426,9 +432,9 @@ Token parse_main(Token* arr){
             if (peek(&if_stack).condition == 1){
                 if (peek(&if_stack).else_flag == 1){
                     return (Token){TOKEN_NEXT};
+                }else{
+                    return parse(arr);
                 }
-                
-                return parse(arr);
             } else if (peek(&if_stack).condition == 0 && peek(&if_stack).else_flag == 1){
                 return parse(arr);
             }else{

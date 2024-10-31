@@ -1,0 +1,58 @@
+var1 = true
+var2 = 1
+var3 = "a"
+
+var1 = false
+var1
+
+num1 = 5
+num2 = 10
+sum1 = num1 + num2
+
+str1 = "Hello, "
+str2 = "World!"
+combinedStr = str1 + str2
+combinedStr
+
+str3 = "The number is: "
+num3 = 42
+combinedStrNum = str3 + num3
+combinedStrNum
+
+num4 = 1
+num5 = 2
+num6 = 3
+num7 = 4
+sum2 = num4 + num5 + num6 + num7
+sum2
+
+str4 = "Boolean value is: "
+bool1 = true
+combinedStrBool = str4 + bool1
+
+num8 = 20
+num9 = 5
+difference = num8 - num9
+
+num10 = 6
+num11 = 7
+product = num10 * num11
+
+num12 = 15
+num13 = 3
+quotient = num12 / num13
+
+
+true && false
+1 and 1
+true || false
+0 or 0
+1>1
+1>=1
+1<2
+1<1
+1<=1
+1==1
+1!=0
+
+

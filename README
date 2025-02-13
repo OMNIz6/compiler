@@ -1,0 +1,24 @@
+# Project Title
+
+A brief description of what this project does and who it's for.
+
+## Table of Contents
+
+- [Installation](#installation)
+- [Usage](#usage)
+
+## Installation
+
+Instructions on how to install and set up the project.
+use the below command to compile the code into a executable (gcc is required to compile the code)
+
+gcc main.c interpreter.c parser.c executor.c lexer.c variables.c functions.c -o omni
+
+##Usage
+
+Below command will initialize the inline code editor
+omni
+./omni ##for linux
+
+below command will execute the script file omni extension
+omni demo.omni
